@@ -3,27 +3,32 @@ document.getElementById('searchForm').onsubmit = async function(e) {
   document.getElementById('error').textContent = '';
   document.getElementById('resultTable').innerHTML = '';
   document.getElementById('explainBox')?.remove();
+  
   // 기존 쉽게 설명 버튼 제거
-  const existingExplainBtn = document.querySelector('.btn-info[onclick*="explain"]');
+  const existingExplainBtn = document.getElementById('explainBtn');
   if (existingExplainBtn) {
     existingExplainBtn.remove();
   }
+  
   const form = e.target;
   const data = {
     corpName: form.corpName.value,
     bsnsYear: form.bsnsYear.value,
     reprtCode: form.reprtCode.value
   };
+  
   const res = await fetch('/api/search', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(data)
   });
+  
   const result = await res.json();
   if (!res.ok || result.status !== '000') {
     document.getElementById('error').textContent = result.error || result.message || '오류';
     return;
   }
+  
   // 표 생성
   let html = '<table class="table table-bordered"><thead><tr><th>계정명</th><th>구분</th><th>당기금액</th><th>전기금액</th></tr></thead><tbody>';
   result.list.forEach(i => {
@@ -36,6 +41,7 @@ document.getElementById('searchForm').onsubmit = async function(e) {
   });
   html += '</tbody></table>';
   document.getElementById('resultTable').innerHTML = html;
+  
   // 차트 생성
   const ctx = document.getElementById('chart').getContext('2d');
   if (window.myChart) window.myChart.destroy();
@@ -58,11 +64,6 @@ document.getElementById('searchForm').onsubmit = async function(e) {
       }
     }
   });
-  // 기존 쉽게 설명 버튼 제거
-  const existingExplainBtn = document.getElementById('explainBtn');
-  if (existingExplainBtn) {
-    existingExplainBtn.remove();
-  }
   
   // 쉽게 설명 버튼 추가
   const explainBtn = document.createElement('button');
@@ -73,6 +74,7 @@ document.getElementById('searchForm').onsubmit = async function(e) {
     explainBtn.disabled = true;
     explainBtn.textContent = '설명 생성중...';
     document.getElementById('explainBox')?.remove();
+    
     const explainRes = await fetch('/api/explain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -83,6 +85,7 @@ document.getElementById('searchForm').onsubmit = async function(e) {
         data: result
       })
     });
+    
     const explainData = await explainRes.json();
     const box = document.createElement('div');
     box.id = 'explainBox';
@@ -92,6 +95,7 @@ document.getElementById('searchForm').onsubmit = async function(e) {
     explainBtn.disabled = false;
     explainBtn.textContent = '쉽게 설명';
   };
+  
   document.getElementById('resultTable').after(explainBtn);
 };
 
