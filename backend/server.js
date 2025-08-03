@@ -13,11 +13,38 @@ console.log('PORT:', process.env.PORT);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// 헬스체크 엔드포인트
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    hasOpenDartKey: !!process.env.OPENDART_API_KEY,
+    hasGeminiKey: !!process.env.GEMINI_API_KEY
+  });
+});
+
 app.post('/api/search', (req, res) => {
   const { corpName, bsnsYear, reprtCode } = req.body;
+  
+  // 입력값 검증
+  if (!corpName || !bsnsYear || !reprtCode) {
+    return res.status(400).json({ error: '필수 입력값이 누락되었습니다.' });
+  }
+  
+  // API 키 확인
+  if (!process.env.OPENDART_API_KEY) {
+    return res.status(500).json({ error: 'OpenDART API 키가 설정되지 않았습니다.' });
+  }
+  
   getCorpCodeByName(corpName, (err, corpCode) => {
-    if (err) return res.status(500).json({ error: 'DB 오류' });
-    if (!corpCode) return res.status(404).json({ error: '회사코드 없음' });
+    if (err) {
+      console.error('DB 오류:', err);
+      return res.status(500).json({ error: '데이터베이스 오류: ' + err.message });
+    }
+    if (!corpCode) {
+      return res.status(404).json({ error: `'${corpName}' 회사코드를 찾을 수 없습니다.` });
+    }
 
     const apiUrl = 'https://opendart.fss.or.kr/api/fnlttSinglAcnt.json';
     axios.get(apiUrl, {
@@ -30,7 +57,11 @@ app.post('/api/search', (req, res) => {
     }).then(apiRes => {
       res.json(apiRes.data);
     }).catch(e => {
-      res.status(500).json({ error: 'OpenDART API 오류' });
+      console.error('OpenDART API 오류:', e.response?.data || e.message);
+      res.status(500).json({ 
+        error: 'OpenDART API 오류',
+        detail: e.response?.data || e.message 
+      });
     });
   });
 });
