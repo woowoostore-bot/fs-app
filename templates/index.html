@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>재무제표 시각화</title>
+</head>
+<body>
+    <h1>재무제표 시각화</h1>
+    <form method="post">
+        <label>회사명: <input type="text" name="corp_name" required></label><br>
+        <label>사업연도: <input type="text" name="bsns_year" value="2023" required></label><br>
+        <label>보고서코드:
+            <select name="reprt_code">
+                <option value="11011">사업보고서</option>
+                <option value="11012">반기보고서</option>
+                <option value="11013">1분기보고서</option>
+                <option value="11014">3분기보고서</option>
+            </select>
+        </label><br>
+        <button type="submit">조회</button>
+    </form>
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    {% if table_html %}
+        <h2>주요 재무정보 표</h2>
+        <div>{{ table_html|safe }}</div>
+    {% endif %}
+    {% if chart_html %}
+        <h2>시각화 차트</h2>
+        <div>{{ chart_html|safe }}</div>
+    {% endif %}
+</body>
+</html> 
