@@ -1,14 +1,35 @@
+// 페이지 로드 시 폼 연결 확인
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('페이지 로드됨');
+  const searchForm = document.getElementById('searchForm');
+  if (searchForm) {
+    console.log('검색 폼 찾음');
+  } else {
+    console.log('검색 폼을 찾을 수 없음');
+  }
+});
+
 document.getElementById('searchForm').onsubmit = async function(e) {
   e.preventDefault();
-  document.getElementById('error').textContent = '';
+  console.log('폼 제출됨');
+  
+  // 에러 메시지 초기화
+  const errorElement = document.getElementById('error');
+  errorElement.textContent = '';
+  errorElement.style.display = 'none';
+  
+  // 결과 섹션 초기화
   document.getElementById('resultTable').innerHTML = '';
   document.getElementById('balanceSheetBox').innerHTML = '';
   document.getElementById('explainBox')?.remove();
   
-  // 기존 쉽게 설명 버튼 제거
-  const existingExplainBtn = document.getElementById('explainBtn');
-  if (existingExplainBtn) {
-    existingExplainBtn.remove();
+  // 결과 섹션 숨기기
+  document.getElementById('resultsSection').style.display = 'none';
+  
+  // 기존 설명 박스 제거
+  const existingExplainBox = document.getElementById('explainBox');
+  if (existingExplainBox) {
+    existingExplainBox.remove();
   }
   
   const form = e.target;
@@ -17,6 +38,7 @@ document.getElementById('searchForm').onsubmit = async function(e) {
     bsnsYear: form.bsnsYear.value,
     reprtCode: form.reprtCode.value
   };
+  console.log('전송할 데이터:', data);
   
   const res = await fetch('/api/search', {
     method: 'POST',
@@ -25,10 +47,17 @@ document.getElementById('searchForm').onsubmit = async function(e) {
   });
   
   const result = await res.json();
+  console.log('서버 응답:', result);
   if (!res.ok || result.status !== '000') {
-    document.getElementById('error').textContent = result.error || result.message || '오류';
+    const errorElement = document.getElementById('error');
+    errorElement.textContent = result.error || result.message || '오류';
+    errorElement.style.display = 'block';
+    console.log('오류 발생:', result.error || result.message);
     return;
   }
+  
+  // 결과 섹션 표시
+  document.getElementById('resultsSection').style.display = 'block';
   
   // 표 생성
   let html = '<table class="table table-bordered"><thead><tr><th>계정명</th><th>구분</th><th>당기금액</th><th>전기금액</th></tr></thead><tbody>';
@@ -56,51 +85,42 @@ document.getElementById('searchForm').onsubmit = async function(e) {
       datasets: [{
         label: '당기금액',
         data: result.list.map(i => parseInt((i.thstrm_amount || '0').replace(/,/g, '')) || 0),
-        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+        borderColor: 'rgba(102, 126, 234, 1)',
+        borderWidth: 1
       }]
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false }
       },
       scales: {
-        x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } }
+        x: { 
+          ticks: { 
+            autoSkip: false, 
+            maxRotation: 90, 
+            minRotation: 45,
+            font: {
+              size: 10
+            }
+          } 
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            font: {
+              size: 12
+            }
+          }
+        }
       }
     }
   });
   
-  // 쉽게 설명 버튼 추가
-  const explainBtn = document.createElement('button');
-  explainBtn.id = 'explainBtn';
-  explainBtn.textContent = '쉽게 설명';
-  explainBtn.className = 'btn btn-info my-2';
-  explainBtn.onclick = async function() {
-    explainBtn.disabled = true;
-    explainBtn.textContent = '설명 생성중...';
-    document.getElementById('explainBox')?.remove();
-    
-    const explainRes = await fetch('/api/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        corpName: form.corpName.value,
-        bsnsYear: form.bsnsYear.value,
-        reprtCode: form.reprtCode.value,
-        data: result
-      })
-    });
-    
-    const explainData = await explainRes.json();
-    const box = document.createElement('div');
-    box.id = 'explainBox';
-    box.className = 'alert alert-success';
-    box.innerHTML = '<b>Gemini 요약 설명:</b><br>' + (explainData.explain || explainData.error || '설명 결과가 없습니다.');
-    document.getElementById('resultTable').after(box);
-    explainBtn.disabled = false;
-    explainBtn.textContent = '쉽게 설명';
-  };
-  
-  document.getElementById('resultTable').after(explainBtn);
+    // 쉽게 설명 버튼 이벤트 리스너 설정
+  setupExplainButton(form, result);
 };
 
 function formatAmount(val) {
@@ -196,4 +216,40 @@ function createBalanceSheetBox(data) {
   `;
   
   document.getElementById('balanceSheetBox').innerHTML = html;
+}
+
+function setupExplainButton(form, result) {
+  const explainBtn = document.getElementById('explainBtn');
+  if (explainBtn) {
+    explainBtn.onclick = async function() {
+      explainBtn.disabled = true;
+      explainBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>설명 생성중...';
+      
+      // 기존 설명 박스 제거
+      const existingExplainBox = document.getElementById('explainBox');
+      if (existingExplainBox) {
+        existingExplainBox.remove();
+      }
+      
+      const explainRes = await fetch('/api/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          corpName: form.corpName.value,
+          bsnsYear: form.bsnsYear.value,
+          reprtCode: form.reprtCode.value,
+          data: result
+        })
+      });
+      
+      const explainData = await explainRes.json();
+      const box = document.createElement('div');
+      box.id = 'explainBox';
+      box.className = 'alert alert-success';
+      box.innerHTML = '<b>Gemini 요약 설명:</b><br>' + (explainData.explain || explainData.error || '설명 결과가 없습니다.');
+      document.getElementById('explainSection').appendChild(box);
+      explainBtn.disabled = false;
+      explainBtn.innerHTML = '<i class="fas fa-magic me-1"></i>쉽게 설명';
+    };
+  }
 } 
