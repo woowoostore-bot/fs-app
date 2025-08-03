@@ -3,6 +3,11 @@ document.getElementById('searchForm').onsubmit = async function(e) {
   document.getElementById('error').textContent = '';
   document.getElementById('resultTable').innerHTML = '';
   document.getElementById('explainBox')?.remove();
+  // 기존 쉽게 설명 버튼 제거
+  const existingExplainBtn = document.querySelector('.btn-info[onclick*="explain"]');
+  if (existingExplainBtn) {
+    existingExplainBtn.remove();
+  }
   const form = e.target;
   const data = {
     corpName: form.corpName.value,
@@ -53,8 +58,15 @@ document.getElementById('searchForm').onsubmit = async function(e) {
       }
     }
   });
+  // 기존 쉽게 설명 버튼 제거
+  const existingExplainBtn = document.getElementById('explainBtn');
+  if (existingExplainBtn) {
+    existingExplainBtn.remove();
+  }
+  
   // 쉽게 설명 버튼 추가
   const explainBtn = document.createElement('button');
+  explainBtn.id = 'explainBtn';
   explainBtn.textContent = '쉽게 설명';
   explainBtn.className = 'btn btn-info my-2';
   explainBtn.onclick = async function() {
